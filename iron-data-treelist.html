@@ -1,0 +1,34 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`iron-data-treelist`
+
+
+@demo demo/index.html 
+-->
+
+<dom-module id="iron-data-treelist">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <h2>Hello [[prop1]]</h2>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'iron-data-treelist',
+
+      properties: {
+        prop1: {
+          type: String,
+          value: 'iron-data-treelist',
+        },
+      },
+
+    });
+  </script>
+</dom-module>
