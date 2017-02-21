@@ -26,7 +26,7 @@ For example, given the following `data` array:
 ```js
 [
   {
-    "name: "Root Object",
+    "name": "Root Object",
     "items": [
       {
         "name" : "Child 1"
