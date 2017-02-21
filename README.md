@@ -23,7 +23,7 @@ Node templates should bind to template models of the following structure:
 
 For example, given the following `data` array:
 ##### data.json
-```json
+```js
 [
   {
     "name: "Root Object",
