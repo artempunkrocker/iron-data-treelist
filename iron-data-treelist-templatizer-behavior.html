@@ -1,0 +1,94 @@
+<!--
+@license
+Copyright 2017 Artem Vasilyev
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<script>
+  var Titan = window.Titan || {};
+
+  Titan.DataTreeListTemplatizerBehaviorImplementation = {
+      properties: {
+        /**
+         * The node object.
+         */
+        node: Object,
+        expanded: {
+          reflectToAttribute: true,
+          type: Boolean,
+          value: false
+        },
+        hasChildren: {
+          readOnly: true,
+          reflectToAttribute: true,
+          type: Boolean
+        },
+        level: {
+          readOnly: true,
+          reflectToAttribute: true,
+          type: Number
+        },
+        _instance: {
+          type: Object,
+          computed: '_templatize(template)'
+        }
+      },
+
+      _instanceProps: {
+        expanded: true,
+        hasChildren: true,
+        level: true,
+        item: true
+      },
+
+      observers: [
+        '_nodeChanged(node.*)',
+        '_dataChanged(_instance, node.item)',
+        '_levelChanged(_instance, level)',
+        '_expandedChanged(_instance, expanded)'
+      ],
+
+      _dataChanged: function(_instance, item) {
+        _instance.item = item;
+      },
+
+      _expandedChanged: function(_instance, expanded) {
+        _instance.expanded = expanded;
+      },
+
+      _nodeChanged: function(node) {
+        this._setLevel(node ? node.base.level || 0 : 0);
+        this._setHasChildren(node ? node.base.hasChildren : false);
+      },
+
+      _levelChanged: function(_instance, level) {
+        this.customStyle['--node-level'] = String(level);
+        this.updateStyles();
+        
+        _instance.level = level;
+      },
+
+      _templatize: function(template) {
+        this.templatize(template);
+        var instance = this.stamp({});
+
+        Polymer.dom(this.$$('.node-content')).appendChild(instance.root);
+
+        return instance;
+      },
+  };
+
+  Titan.DataTreeListTemplatizer = [
+    Polymer.Templatizer, Titan.DataTreeListTemplatizerBehaviorImplementation
+  ]
+</script>

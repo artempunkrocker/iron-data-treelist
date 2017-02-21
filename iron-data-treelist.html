@@ -1,8 +1,96 @@
+<!--
+@license
+Copyright 2017 Artem Vasilyev
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 <link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-list/iron-list.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="iron-data-treelist-node.html">
 
 <!--
-`iron-data-treelist`
+`iron-data-treelist` builds treelist from your data
 
+### Template model
+Node templates should bind to template models of the following structure:
+```js
+{
+  expanded: false,  // true if node have been expanded for the current item
+  level: 0,         // level of the node for the current item
+  item: {}          // user data corresponding to items
+}
+```
+
+For example, given the following `data` array:
+##### data.json
+```json
+[
+  {
+    "name: "Root Object",
+    "items": [
+      {
+        "name" : "Child 1"
+      },
+      {
+        "name": "Child 2",
+        "items": [
+          {
+            "name": "Child 2.1",
+            "items": [
+              {
+                "name": "Child 2.1.1"
+              },
+              {
+                "name": "Child 2.1.2"
+              },
+              {
+                "name": "Child 2.1.3"
+              },
+              {
+                "name": "Child 2.1.4"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+
+This sample demonstrates using of treelist:
+```html
+<template is="dom-bind">
+  <iron-ajax url="data.json" last-response="{{data}}" auto></iron-ajax>
+  <iron-data-treelist items="[[data]]">
+    <template>
+      [[item.name]]
+    </template>
+  </iron-data-treelist>
+</template>
+```
+
+### Styling
+There are several custom properties and mixins you can use to style the component:
+
+Custom property | Description
+----------------|--------------
+`--node-indent` | Width of the node indent | `24px`
+`--iron-data-treelist-node` | Mixin applied to the node
+`--iron-data-treelist-node-hover` | Mixin applied to the node when its hovered
+`--iron-data-treelist-expander` | Mixin applied to default expander icon
+`--iron-data-treelist-expander-opened` | Mixin applied to opened default expander icon
 
 @demo demo/index.html 
 -->
@@ -11,24 +99,244 @@
   <template>
     <style>
       :host {
+        --node-indent: 24;
+
         display: block;
       }
+
+      iron-list iron-data-treelist-node {
+        --node-space: var(--node-indent);
+      }
     </style>
-    <h2>Hello [[prop1]]</h2>
+    <iron-list id="list" items="[[_cachedNodes]]">
+      <template>
+        <iron-data-treelist-node
+            expanded="[[_isExpanded(item.data, _expandedItems, _expandedItems.*)]]"
+            node="[[item]]"
+            template="[[template]]"
+            tree="[[_tree]]">
+        </iron-data-treelist-node>
+      </template>
+    </iron-list>
+    <content select="template"></content>
   </template>
 
   <script>
     Polymer({
 
-      is: 'iron-data-treelist',
+      is: "iron-data-treelist",
 
-      properties: {
-        prop1: {
-          type: String,
-          value: 'iron-data-treelist',
-        },
+      hostAttributes: {
+        'role': 'tree'
       },
 
+      properties: {
+        /**
+         * An array containing the items which will be stamped to the root nodes.
+         */
+        items: {
+          type: Array,
+          value: function() {
+            return [];
+          }
+        },
+        /**
+         * An array containing the items which was expanded.
+         */
+        _expandedItems: {
+          type: Array,
+          value: function() {
+            return [];
+          }
+        },
+        /**
+         * The instance of tree for binding to a nodes.
+         */
+        _tree: {
+          value: function() {
+            return this;
+          }
+        }
+      },
+
+      observers: [
+        '_cachedNodesChanged(_cachedNodes.*)',
+        '_expandedItemsChanges(_expandedItems.splices)',
+        '_itemsChanged(items.*)'
+      ],
+
+      attached: function() {
+        this.template = this.queryEffectiveChildren('template');
+      },
+
+      _cachedNodesChanged: function(_cachedNodes) {
+        if (_cachedNodes.path == '_cachedNodes') {
+          this.notifyResize();
+        } else {
+          if (_cachedNodes.path.endsWith('.splices')) {
+            this.notifyResize();
+
+            _cachedNodes.value.indexSplices.forEach(function(splice) {
+              if (splice.addedCount) {
+                splice.object
+                 .slice(splice.index, splice.index + splice.addedCount)
+                  .forEach(function(added) {
+                    if (this._expandedItems.includes(added.item) && Array.isArray(added.item.items)) {
+                      var index = this._cachedNodes.indexOf(added);
+
+                      if (index == -1) {
+                        index = splice.index;
+                      }
+
+                      this.splice('_cachedNodes', index + 1, 0, ...this._cacheItems(added.item.items, added.key));
+                    }
+                 }, this);
+              }
+            }, this);
+          }
+        }
+      },
+
+      _cacheItems: function(items, path) {
+        var p = path;
+
+        if (p) {
+          p += '.items';
+        } else {
+          p = 'items';
+        }
+
+        return items.map(function(item, index) {
+          return {
+            key: p + '.' + index,
+            hasChildren: Array.isArray(item.items),
+            level: p.split('items').length - 2,
+            item: item
+          };
+        });
+      },
+
+      _expandedItemsChanges: function(splices) {
+        if (splices) {
+          splices.indexSplices.forEach(function(splice) {
+            splice.removed.forEach(this._collapseItem, this);
+
+            for (var i = splice.index; i < splice.index + splice.addedCount; i++) {
+              this._expandItem(splice.object[i]);
+            }
+          }, this);
+        }
+      },
+
+      _collapseItem: function(item) {
+        var index = this._cachedNodes.findIndex(function(cachedItem) {
+          return item == cachedItem.item;
+        });
+
+        if (index > -1) {
+          var cachedItem = this._cachedNodes[index];
+          var length = 0;
+          var i = 0;
+          var nextItem = this._cachedNodes[index + 1];
+          var compareKey = cachedItem.key + '.';
+
+          while (nextItem && nextItem.key.startsWith(compareKey)) {
+            i++;
+            length++;
+            nextItem = this._cachedNodes[index + 1 + i];
+          }
+
+          this.splice('_cachedNodes', index + 1, length);
+        }
+      },
+
+      _expandItem: function(item) {
+        var index = this._cachedNodes.findIndex(function(node) {
+          return item == node.item;
+        });
+
+        if (index > -1) {
+          var node = this._cachedNodes[index];
+          var items = item.items;
+
+          if (Array.isArray(items)) {
+            this.splice('_cachedNodes', index + 1, 0, ...this._cacheItems(items, node.key));
+          }
+        }
+      },
+
+      _isExpanded: function(item, expandItems, changes) {
+        return expandItems && expandItems.indexOf(item) > -1;
+      },
+
+      _itemsChanged: function(items) {
+        if (items.path === 'items') {
+          this._cachedNodes = this._cacheItems(items.value);
+        } else {
+          if (items.path.endsWith('splices')) {
+
+          }
+        }
+      },
+
+      /**
+       * Collapses the node for this item.
+       *
+       * @param {Object} item The item which need to collapse.
+       * @return {Object} The instance of iron-data-treelist.
+       */
+      collapseItem: function(item) {
+        var index = this._expandedItems.indexOf(item);
+
+        if (index > -1) {
+          this.splice('_expandedItems', index, 1);
+        }
+
+        return this;
+      },
+
+      /**
+       * Expands the node for this item.
+       *
+       * @param {Object} item The item which need to expand.
+       * @return {Object} The instance of iron-data-treelist.
+       */
+      expandItem: function(item) {
+        if (!this._expandedItems.includes(item)) {
+          this.push('_expandedItems', item);
+        }
+
+        return this;
+      },
+
+      /**
+       * Toggles the node for this item.
+       *
+       * @param {Object} item The item which toggles.
+       * @return {Object} The instance of iron-data-treelist.
+       */
+      toggleItem: function(item) {
+        var index = this._expandedItems.indexOf(item);
+
+        if (index > -1) {
+          this.splice('_expandedItems', index, 1);
+        } else {
+          this.push('_expandedItems', item);
+        }
+      },
+
+      /**
+       * Forces treelist to redraw.
+       *
+       * @return {Object} The instance of iron-data-treelist.
+       */
+      notifyResize: function() {
+        this.debounce('resize', function() {
+          this.$.list.notifyResize();
+        }, 100);
+
+        return this;
+      }
     });
   </script>
 </dom-module>
