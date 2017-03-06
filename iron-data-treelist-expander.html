@@ -27,24 +27,53 @@ limitations under the License.
         display: flex;
         cursor: pointer;
       }
-
-      :host[expanded] iron-icon {
-        transform: rotate(90deg);
-        @apply(--iron-data-treelist-expander-opened);
-      }
-
-      iron-icon {
-        @apply(--iron-data-treelist-expander);
-      }
     </style>
 
-    <iron-icon icon="icons:chevron-right"></iron-icon>
-    <content select="template[is=tree-node-expander]"></content>
   </template>
 
   <script>
     Polymer({
       is: 'iron-data-treelist-expander',
+
+      behaviors: [
+        Polymer.Templatizer
+      ],
+
+      properties: {
+        _instance: {
+          type: Object,
+          computed: '_templatize(template)'
+        },
+        expanded: {
+          reflectToAttribute: true,
+          type: Boolean,
+          value: false
+        }
+      },
+      
+      observers: [
+        '_expandedChanged(_instance, expanded)',
+      ],
+
+      _templatize: function(template) {
+        if (template) {
+          this.templatize(template);
+
+          if (template._rootDataHost) {
+            this._getRootDataHost = function() { return template._rootDataHost; };
+          }
+
+          var instance = this.stamp({});
+
+          Polymer.dom(this.root).appendChild(instance.root);
+
+          return instance;
+        }
+      },
+
+      _expandedChanged: function(_instance, expanded) {
+        _instance.expanded = expanded;
+      },
     });
   </script>
 </dom-module>

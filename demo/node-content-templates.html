@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>iron-data-treelist templates demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../iron-data-treelist.html">
+    <link rel="import" href="../../iron-ajax/iron-ajax.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Simple template</h3>
+      <demo-snippet>
+        <template is="dom-bind">
+          <iron-ajax url="data.json" last-response="{{data}}" auto></iron-ajax>
+          <iron-data-treelist items="[[data]]">
+            <template>
+              [[item.Title]]
+            </template>
+          </iron-data-treelist>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

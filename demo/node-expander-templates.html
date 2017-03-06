@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>iron-data-treelist templates demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../iron-data-treelist.html">
+    <link rel="import" href="../../iron-ajax/iron-ajax.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Template with 'plus-minus' expander</h3>
+        <demo-snippet>
+          <template>
+            <dom-module id="x-custom-expander">
+              <template>
+                <iron-ajax url="data.json" last-response="{{data}}" auto></iron-ajax>
+                <iron-data-treelist items="[[data]]">
+                  <template>
+                    [[item.Title]]
+                  </template>
+                  <template is="expander">
+                    <iron-icon icon="[[iconForNode(expanded)]]"></iron-icon>
+                  </template>
+                </iron-data-treelist>
+              </template>
+              <script>
+                HTMLImports.whenReady(function() {
+                  Polymer({
+                    is: 'x-custom-expander',
+                    iconForNode: function(expanded) {
+                      return !expanded ? 'icons:add' : 'icons:remove';
+                    }
+                  })
+                });
+              </script>
+            </dom-module>
+          </template>
+        <x-custom-expander></x-custom-expander>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

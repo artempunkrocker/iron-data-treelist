@@ -17,6 +17,16 @@
     </style>
   </head>
   <body>
+    <div class="horizontal-section-container">
+      <div>
+        <h3>iron-list demos</h3>
+        <ul class="horizontal-section">
+          <li><a href="node-content-templates.html" target="_blank">Node Content Templates</a></li>
+          <li><a href="node-expander-templates.html" target="_blank">Node Expander Templates</a></li>
+          <li><a href="selecting.html" target="_blank">Selecting</a></li>
+        </ul>
+      </div>
+    </div>
     <div class="vertical-section-container centered">
       <h3>Basic iron-data-treelist demo</h3>
       <demo-snippet>
@@ -26,24 +36,9 @@
             <template>
               [[item.Title]]
             </template>
-            <template></template>
           </iron-data-treelist>
         </template>
       </demo-snippet>
-<!--      <h3>Custom expander iron-data-treelist demo</h3>
-      <demo-snippet>
-        <template is="dom-bind">
-          <iron-ajax url="data.json" last-response="{{data}}" auto></iron-ajax>
-          <iron-data-treelist items="[[data]]">
-            <template>
-              [[item.Title]]
-            </template>
-            <template is="treelist-expander">
-              <iron-icon icon="[[_]]"></iron-icon>
-            </template>
-          </iron-data-treelist>
-        </template>
-      </demo-snippet>-->
     </div>
   </body>
 </html>

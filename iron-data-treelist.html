@@ -15,12 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-list/iron-list.html">
 <link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="iron-data-treelist-node.html">
 
 <!--
 `iron-data-treelist` builds treelist from your data
+Data must be an array of `Object` and each `Object` must contain
+a `items` property for showing or hiding expander. 
 
 ### Template model
 Node templates should bind to template models of the following structure:
@@ -28,7 +32,8 @@ Node templates should bind to template models of the following structure:
 {
   expanded: false,  // true if node have been expanded for the current item
   level: 0,         // level of the node for the current item
-  item: {}          // user data corresponding to items
+  item: {},         // user data corresponding to items
+  selected: false   //true if node have been selected for the current item
 }
 ```
 
@@ -87,10 +92,11 @@ There are several custom properties and mixins you can use to style the componen
 Custom property | Description
 ----------------|--------------
 `--node-indent` | Width of the node indent | `24px`
-`--iron-data-treelist-node` | Mixin applied to the node
-`--iron-data-treelist-node-hover` | Mixin applied to the node when its hovered
-`--iron-data-treelist-expander` | Mixin applied to default expander icon
-`--iron-data-treelist-expander-opened` | Mixin applied to opened default expander icon
+`--iron-data-treelist-node` | Mixin applied to the node | `{}`
+`--iron-data-treelist-node-selected` | Mixin applied to selected node | `{}`
+`--iron-data-treelist-node-hover` | Mixin applied to the node when its hovered | `{}`
+`--iron-data-treelist-expander` | Mixin applied to default expander icon | `{}`
+`--iron-data-treelist-expander-opened` | Mixin applied to opened default expander icon | `{}`
 
 @demo demo/index.html 
 -->
@@ -100,25 +106,44 @@ Custom property | Description
     <style>
       :host {
         --node-indent: 24;
+        @apply(--layout);
+        height: 30vh;
+      }
 
-        display: block;
+      iron-list {
+        @apply(--layout-flex);
       }
 
       iron-list iron-data-treelist-node {
         --node-space: var(--node-indent);
       }
+
+      .default__expander[expanded] {
+        transform: rotate(90deg);
+        @apply(--iron-data-treelist-expander-opened);
+      }
+
+      .default__expander {
+        @apply(--iron-data-treelist-expander);
+      }
     </style>
     <iron-list id="list" items="[[_cachedNodes]]">
       <template>
         <iron-data-treelist-node
-            expanded="[[_isExpanded(item.data, _expandedItems, _expandedItems.*)]]"
-            node="[[item]]"
             template="[[template]]"
-            tree="[[_tree]]">
+            expander-template="[[_expanderTemplate]]"
+            expanded="[[_isExpanded(item.item, _expandedItems, _expandedItems.*)]]"
+            node="[[item]]"
+            selected="[[_isSelected(item.item, selectedItems, selectionEnabled, selectedItems.*)]]"
+            tree="[[_tree]]"
+            on-tap="_onRowTap">
         </iron-data-treelist-node>
       </template>
     </iron-list>
     <content select="template"></content>
+    <template is="expander">
+      <iron-icon expanded$="[[expanded]]" class="default__expander" icon="icons:chevron-right"></iron-icon>
+    </template>
   </template>
 
   <script>
@@ -135,6 +160,34 @@ Custom property | Description
          * An array containing the items which will be stamped to the root nodes.
          */
         items: {
+          type: Array,
+          value: function() {
+            return [];
+          }
+        },
+        /**
+         * When `true`, multiple items may be selected at once (in this case,
+         * `selected` is an array of currently selected items).  When `false`,
+         * only one item may be selected at a time.
+         */
+        multi: {
+          reflectToAttribute: true,
+          type: Boolean,
+          value: false
+        },
+        /**
+        * When true, tapping a node will select the item, placing its data model
+        * in the set of selected items retrievable via the selection property.
+        */
+        selectionEnabled: {
+          reflectToAttribute: true,
+          type: Boolean,
+          value: false
+        },
+        /**
+         * An array of selected items.
+         */
+        selectedItems: {
           type: Array,
           value: function() {
             return [];
@@ -166,7 +219,26 @@ Custom property | Description
       ],
 
       attached: function() {
-        this.template = this.queryEffectiveChildren('template');
+        var templates = this.queryAllEffectiveChildren('template');
+        var template = [].find.call(templates, function(item) {
+          return item.getAttribute('is') != 'expander';
+        });
+
+        var parent = Polymer.dom(template).parentNode;
+
+        template._rootDataHost = parent.dataHost ? (parent.dataHost._rootDataHost || parent.dataHost) : parent;
+
+        this.template = template;
+
+        var expanderTemplate =  [].find.call(templates, function(item) {
+          return item.getAttribute('is') == 'expander';
+        }) || this.querySelector('template[is=expander]');
+
+        parent = Polymer.dom(expanderTemplate).parentNode;
+
+        expanderTemplate._rootDataHost = parent.dataHost ? (parent.dataHost._rootDataHost || parent.dataHost) : parent;
+
+        this._expanderTemplate = expanderTemplate;
       },
 
       _cachedNodesChanged: function(_cachedNodes) {
@@ -265,7 +337,15 @@ Custom property | Description
         }
       },
 
-      _isExpanded: function(item, expandItems, changes) {
+      _isExpanded: function(item, expandItems) {
+        return expandItems && expandItems.indexOf(item) > -1;
+      },
+
+      _isSelected: function(item, expandItems, selectionEnabled) {
+        if (!selectionEnabled) {
+          return false;
+        }
+        
         return expandItems && expandItems.indexOf(item) > -1;
       },
 
@@ -276,6 +356,17 @@ Custom property | Description
           if (items.path.endsWith('splices')) {
 
           }
+        }
+      },
+
+      _onRowTap: function(e) {
+        var item = e.currentTarget.node.item;
+        var index = this.selectedItems.indexOf(item);
+
+        if (index == -1) {
+          this.selectItem(item);
+        } else {
+          this.deselectItem(item);
         }
       },
 
@@ -295,6 +386,19 @@ Custom property | Description
         return this;
       },
 
+       /**
+       * Deselects the node for this item.
+       *
+       * @param {Object} item The item object
+       */
+      deselectItem: function(item) {
+        var index = this.selectedItems.indexOf(item);
+
+        if (index > -1) {
+          this.splice('selectedItems', this.selectedItems.indexOf(item), 1);
+        }
+      },
+
       /**
        * Expands the node for this item.
        *
@@ -307,6 +411,21 @@ Custom property | Description
         }
 
         return this;
+      },
+
+       /**
+       * Selects the node for this item.
+       *
+       * @param {Object} item The item object
+       */
+      selectItem: function(item) {
+        if (this.selectionEnabled) {
+          if (this.multi) {
+            this.push('selectedItems', item);
+          } else {
+            this.selectedItems = [item];
+          }
+        }
       },
 
       /**
@@ -323,6 +442,8 @@ Custom property | Description
         } else {
           this.push('_expandedItems', item);
         }
+
+        return this;
       },
 
       /**

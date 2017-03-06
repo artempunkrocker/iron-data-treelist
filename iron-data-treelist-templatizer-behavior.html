@@ -38,6 +38,11 @@ limitations under the License.
           reflectToAttribute: true,
           type: Number
         },
+        selected: {
+          reflectToAttribute: true,
+          type: Boolean,
+          value: false
+        },
         _instance: {
           type: Object,
           computed: '_templatize(template)'
@@ -55,7 +60,8 @@ limitations under the License.
         '_nodeChanged(node.*)',
         '_dataChanged(_instance, node.item)',
         '_levelChanged(_instance, level)',
-        '_expandedChanged(_instance, expanded)'
+        '_expandedChanged(_instance, expanded)',
+        '_selectedChanged(_instance, selected)'
       ],
 
       _dataChanged: function(_instance, item) {
@@ -64,6 +70,10 @@ limitations under the License.
 
       _expandedChanged: function(_instance, expanded) {
         _instance.expanded = expanded;
+      },
+
+      _selectedChanged: function(_instance, selected) {
+        _instance.selected = selected;
       },
 
       _nodeChanged: function(node) {
@@ -80,6 +90,13 @@ limitations under the License.
 
       _templatize: function(template) {
         this.templatize(template);
+
+
+        if (template._rootDataHost) {
+          this._getRootDataHost = function() { return template._rootDataHost; };
+        }
+
+
         var instance = this.stamp({});
 
         Polymer.dom(this.$$('.node-content')).appendChild(instance.root);

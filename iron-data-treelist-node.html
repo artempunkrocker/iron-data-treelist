@@ -26,20 +26,29 @@ limitations under the License.
         --indent: var(--node-space, 12);
         display: flex;
         padding-left: calc(var(--indent) * var(--node-level, 0) * 1px);
+        cursor: pointer;
         @apply(--iron-data-treelist-node);
       }
-
+ 
       :host:not([has-children]) .node-content {
         margin-left: calc(var(--indent) * 1px);
       }
 
       :host:hover {
+        background: #eee;
         @apply(--iron-data-treelist-node-hover);
+      }
+
+      :host[selected] {
+        background: #eee;
+        @apply(--iron-data-treelist-node-selected);
       }
     </style>
 
     <div class="layout horizontal center expander" hidden="[[!hasChildren]]" on-tap="toggle"> 
-      <iron-data-treelist-expander expanded$="[[expanded]]">
+      <iron-data-treelist-expander
+        expanded="[[expanded]]"
+        template="[[expanderTemplate]]">
       </iron-data-treelist-expander>
     </div>
     <div class="layout horizontal center flex-auto node-content"></div>
@@ -58,8 +67,9 @@ limitations under the License.
         'role': 'treeitem'
       },
 
-    
-      toggle: function() {
+      toggle: function(e) {
+        e.stopPropagation();
+        e.preventDefault();
         this.tree.toggleItem(this.node.item);
       }
     });
